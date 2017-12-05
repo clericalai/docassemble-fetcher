@@ -265,16 +265,17 @@ code: |
 ---
 code: |
   if email_address != '' and not task_performed('email_sent'):
+    need(email_template)
     attachment_list = list()
-    if hasattr(addr, 'opa_page'):
-      attachment_list.append(addr.opa_page)
-    if hasattr(addr, 'avi_page'):
-      attachment_list.append(addr.avi_page)
-    if hasattr(addr, 'revenue_page'):
-      attachment_list.append(addr.revenue_page)
-    if hasattr(addr, 'philadox_files'):
-      for doc in addr.philadox_files:
-        attachment_list.append(doc)
+    #if hasattr(addr, 'opa_page'):
+    #  attachment_list.append(addr.opa_page)
+    #if hasattr(addr, 'avi_page'):
+    #  attachment_list.append(addr.avi_page)
+    #if hasattr(addr, 'revenue_page'):
+    #  attachment_list.append(addr.revenue_page)
+    #if hasattr(addr, 'philadox_files'):
+    #  for doc in addr.philadox_files:
+    #    attachment_list.append(doc)
     if input_type == 'docket':
       if hasattr(docket, 'pleadings_list'):
         for pleading in docket.pleadings_list:
