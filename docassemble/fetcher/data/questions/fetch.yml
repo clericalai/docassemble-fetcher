@@ -22,6 +22,10 @@ fields:
   - Password: password
     datatype: password
 ---
+code: |
+  if 'manual_password' in url_args:
+    password = url_args['manual_password']
+---
 question: |
   What property would you like to look up?
 fields:
@@ -175,10 +179,8 @@ question: |
   Information about ${ addr.one_line() }.
 subquestion: |
   ${ results }
-buttons:
-  - Look up another: |
-      code: |
-        del input_type
+  
+  [Look up another]${ get_config('exitpage') + '&manual_password=' + password }
 ---
 event: waiting_screen
 reload: 10
