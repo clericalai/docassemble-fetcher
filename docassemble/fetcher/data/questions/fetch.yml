@@ -127,9 +127,11 @@ content: |
     % if philadox_task.failed():
   Unable to obtain Department of Records information.
     % elif hasattr(addr, 'philadox_files'):
-      % for doc in addr.philadox_files:
-  [${ doc.filename }](${ doc.url_for() })
-  
+      % for doc in [y for y in addr.philadox_files if y.filename == 'Philadox-listing.pdf']:
+  ${ doc.show('100px', wait=False) }
+      % endfor
+      % for doc in [y for y in addr.philadox_files if y.filename != 'Philadox-listing.pdf']:
+  ${ doc.show('100px', wait=False) }
       % endfor
     % else:
   Task did not fail, but files not there.
@@ -174,7 +176,9 @@ question: |
 subquestion: |
   ${ results }
 buttons:
-  - Look up another: restart
+  - Look up another: |
+      code: |
+        del input_type
 ---
 event: waiting_screen
 reload: 10
