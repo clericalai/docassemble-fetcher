@@ -180,7 +180,7 @@ question: |
 subquestion: |
   ${ results }
   
-  [Look up another]${ get_config('exitpage') + '&manual_password=' + password }
+  [Look up another](${ get_config('exitpage') + '&manual_password=' + password })
 ---
 event: waiting_screen
 reload: 10
