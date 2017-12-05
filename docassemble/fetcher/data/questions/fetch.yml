@@ -9,11 +9,22 @@ objects:
   - input_address: Address.using(city="Philadelphia", state="PA")
 ---
 question: |
-  What property would you like to look up?
+  The Fetcher
 subquestion: |
-  Documents will be e-mailed to the address provided.
+  This service is provided by [Philadelphia Legal Assistance] to housing 
+  counselors and homeowner advocates in Philadelphia.
+  
+  Please enter the secret password.
+  
+  [Philadelphia Legal Assistance]: https://philalegal.org
 fields:
-  - Based on: input_type
+  - Password: password
+    datatype: password
+---
+question: |
+  What property would you like to look up?
+fields:
+  - Look up using: input_type
     datatype: radio
     default: address
     choices:
@@ -33,6 +44,13 @@ fields:
       is: address
   - Your e-mail: email_address
     required: False
+  - note: |
+      If you provide your e-mail address, the documents will be e-mailed to you.
+---
+mandatory: True
+code: |
+  if password != get_config('fetcher password'):
+    you_are_not_authorized
 ---
 scan for variables: False
 mandatory: True
@@ -61,6 +79,13 @@ code: |
     waiting_screen
   else:
     final_screen
+---
+event: you_are_not_authorized
+question: |
+  The password you entered is incorrect.
+subquestion: |
+  Sorry, that password was not correct.  You are not
+  allowed to access this system.
 ---
 template: results
 content: |
@@ -155,6 +180,12 @@ reload: 10
 question: |
   Information about ${ addr.one_line() }.
 subquestion: |
+  % if email_address:
+  Your documents are being fetched and will be e-mailed to you when
+  the fetching is completed in a few minutes.  You can close this window
+  or [fetch another address](${ get_config('exitpage') }).
+  
+  % endif
   ${ results }
 ---
 event: opa_generate
