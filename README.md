@@ -17,3 +17,5 @@ google:
 philadox username: smithj
 philadox password: xxsecretpasswordxx
 ```
+
+An e-mail configuration must also be provided.

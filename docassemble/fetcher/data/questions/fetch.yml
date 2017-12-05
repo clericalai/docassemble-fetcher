@@ -42,16 +42,22 @@ code: |
     addr = Property(docket.get_address())
   else:
     addr = Property(input_address)
+  task_list = []
   opa_task = background_action('opa_generate', None, address=addr)
+  task_list.append('opa')
   revenue_task = background_action('revenue_generate', None, address=addr)
+  task_list.append('revenue')
   if input_type == 'docket':
     pleadings_task = background_action('pleadings_generate', None, docket=docket)
+    task_list.append('pleadings')
   philadox_task = background_action('philadox_generate', None, address=addr)
+  task_list.append('philadox')
   street_view_task = background_action('street_view_generate', None, address=addr)
+  task_list.append('street_view')
 ---
 mandatory: True
 code: |
-  if not (opa_task.ready() and philadox_task.ready() and (input_type != 'docket' or pleadings_task.ready()) and street_view_task.ready()):
+  if not all_finished(task_list):
     waiting_screen
   else:
     final_screen
@@ -135,13 +141,14 @@ content: |
   Please wait.
   % endif
 ---
+prevent_going_back: True
 event: final_screen
 question: |
   Information about ${ addr.one_line() }.
 subquestion: |
   ${ results }
 buttons:
-  - Exit: exit
+  - Look up another: restart
 ---
 event: waiting_screen
 reload: 10
@@ -160,6 +167,9 @@ code: |
   addr.opa_page = action_argument('opa_page')
   addr.avi_page = action_argument('avi_page')
   addr.has_homestead = action_argument('homestead')
+  mark_task_as_performed('opa')
+  if all_finished(task_list):
+    email_handled
   background_response()
 ---
 event: revenue_generate
@@ -170,6 +180,9 @@ scan for variables: False
 event: revenue_save
 code: |
   addr.revenue_page = action_argument('revenue_page')
+  mark_task_as_performed('revenue')
+  if all_finished(task_list):
+    email_handled
   background_response()
 ---
 event: pleadings_generate
@@ -180,6 +193,9 @@ scan for variables: False
 event: pleadings_save
 code: |
   docket.pleadings_list = action_argument('pleadings_list')
+  mark_task_as_performed('pleadings')
+  if all_finished(task_list):
+    email_handled
   background_response()
 ---
 event: philadox_generate
@@ -190,6 +206,9 @@ scan for variables: False
 event: philadox_save
 code: |
   addr.philadox_files = action_argument('philadox_files')
+  mark_task_as_performed('philadox')
+  if all_finished(task_list):
+    email_handled
   background_response()
 ---
 event: street_view_generate
@@ -201,28 +220,32 @@ event: street_view_save
 code: |
   addr.google_street_view_image = action_argument('street_view_image')
   addr.google_street_view_pdf = action_argument('street_view_pdf')
+  mark_task_as_performed('street_view')
+  if all_finished(task_list):
+    email_handled
   background_response()
 ---
-event: send_attachments
 code: |
-  attachment_list = list()
-  if hasattr(addr, 'opa_page'):
-    attachment_list.append(addr.opa_page)
-  if hasattr(addr, 'avi_page'):
-    attachment_list.append(addr.avi_page)
-  if hasattr(addr, 'revenue_page'):
-    attachment_list.append(addr.revenue_page)
-  if hasattr(addr, 'philadox_files'):
-    for doc in addr.philadox_files:
-      attachment_list.append(doc)
-  if input_type == 'docket':
-    if hasattr(docket, 'pleadings_list'):
-      for pleading in docket.pleadings_list:
-        attachment_list.append(pleading)
-  if hasattr(addr, 'google_street_view_pdf'):
-    attachment_list.append(addr.google_street_view_pdf)
-  send_email(to=email_address, template=email_template, attachments=attachment_list)
-  del attachment_list
+  if email_address != '' and not task_performed('email_sent'):
+    attachment_list = list()
+    if hasattr(addr, 'opa_page'):
+      attachment_list.append(addr.opa_page)
+    if hasattr(addr, 'avi_page'):
+      attachment_list.append(addr.avi_page)
+    if hasattr(addr, 'revenue_page'):
+      attachment_list.append(addr.revenue_page)
+    if hasattr(addr, 'philadox_files'):
+      for doc in addr.philadox_files:
+        attachment_list.append(doc)
+    if input_type == 'docket':
+      if hasattr(docket, 'pleadings_list'):
+        for pleading in docket.pleadings_list:
+          attachment_list.append(pleading)
+    if hasattr(addr, 'google_street_view_pdf'):
+      attachment_list.append(addr.google_street_view_pdf)
+    send_email(to=email_address, template=email_template, attachments=attachment_list, task='email_sent')
+    del attachment_list
+  email_handled = True
 ---
 template: email_template
 content: |

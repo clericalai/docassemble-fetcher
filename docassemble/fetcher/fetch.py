@@ -1,4 +1,4 @@
-from docassemble.base.util import DAFile, get_config, DAStaticFile, DARedis, Address
+from docassemble.base.util import DAFile, get_config, DAStaticFile, DARedis, Address, task_performed
 import httplib2
 import json
 import urllib
@@ -312,3 +312,8 @@ def png_to_pdf(input_path, output_path):
         if result != 0:
             raise Exception("Image conversion failed")
         
+def all_finished(task_list):
+    for task in task_list:
+        if not task_performed(task):
+            return False
+    return True
