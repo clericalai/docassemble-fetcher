@@ -180,17 +180,17 @@ question: |
 subquestion: |
   ${ results }
   
-  [Look up another](${ get_config('exitpage') + '&manual_password=' + password })
+  <a class="btn btn-primary" href="${ get_config('exitpage', '/?reset=1') + '&manual_password=' + password }">Look up another</a>
 ---
 event: waiting_screen
 reload: 10
 question: |
   Information about ${ addr.one_line() }.
 subquestion: |
-  % if email_address:
+  % if email_address != '':
   Your documents are being fetched and will be e-mailed to you when
   the fetching is completed in a few minutes.  You can close this window
-  or [fetch another address](${ get_config('exitpage') }).
+  or [fetch another address](${ get_config('exitpage', '/?reset=1') + '&manual_password=' + password }).
   
   % endif
   ${ results }
