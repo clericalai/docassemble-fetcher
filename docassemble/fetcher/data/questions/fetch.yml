@@ -248,6 +248,11 @@ code: |
   email_handled = True
 ---
 template: email_template
+subject: |
+  Property info for ${ addr.one_line() }
+  % if input_type == 'docket':
+  (${ docketnum })
+  % endif
 content: |
   Attached are documents relating to the property at ${ addr.one_line() }.
 

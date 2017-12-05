@@ -18,4 +18,4 @@ philadox username: smithj
 philadox password: xxsecretpasswordxx
 ```
 
-An e-mail configuration must also be provided.
+Configuration for an e-mail server must also be provided.
