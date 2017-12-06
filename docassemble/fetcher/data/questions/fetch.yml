@@ -6,6 +6,9 @@ modules:
   - docassemble.base.util
   - .fetch
 ---
+imports:
+  - time
+---
 objects:
   - input_address: Address.using(city="Philadelphia", state="PA")
 ---
@@ -62,21 +65,27 @@ mandatory: True
 code: |
   if input_type == 'docket':
     docket = Docket(docketnum)
-    addr = Property(docket.get_address())
+    try:
+      addr = Property(docket.get_address())
+    except:
+      unable_to_get_address_of_docket
   else:
-    addr = Property(input_address)
+    try:
+      addr = Property(input_address)
+    except:
+      unable_to_normalize_address
   task_list = []
   opa_task = background_action('opa_generate', None, address=addr)
-  task_list.append('opa')
+  task_list.append(opa_task)
   revenue_task = background_action('revenue_generate', None, address=addr)
-  task_list.append('revenue')
+  task_list.append(revenue_task)
   if input_type == 'docket':
     pleadings_task = background_action('pleadings_generate', None, docket=docket)
-    task_list.append('pleadings')
+    task_list.append(pleadings_task)
   philadox_task = background_action('philadox_generate', None, address=addr)
-  task_list.append('philadox')
+  task_list.append(philadox_task)
   street_view_task = background_action('street_view_generate', None, address=addr)
-  task_list.append('street_view')
+  task_list.append(street_view_task)
 ---
 mandatory: True
 code: |
@@ -84,6 +93,27 @@ code: |
     waiting_screen
   else:
     final_screen
+---
+event: unable_to_normalize_address
+question: |
+  Unable to process address
+subquestion: |
+  We were unable to process the address you provided.
+
+  Please try again, and try specifying the address with as much
+  precision as you can, so that the system recognizes it as
+  an address in Philadelphia.
+---
+event: unable_to_get_address_of_docket
+question: |
+  Unable to get documents
+subquestion: |
+  We were unable to find an address for docket
+  number ${ docketnum }.
+
+  Please make sure you have typed the docket number
+  correctly.  Or, try looking up the property
+  by address.
 ---
 event: you_are_not_authorized
 question: |
@@ -97,7 +127,7 @@ content: |
   ### Property assessment
 
   % if opa_task.ready():
-    % if opa_task.failed():
+    % if not hasattr(addr, 'opa_page'):
   Unable to obtain OPA information.
     % else:
   ${ addr.opa_page.show('100px', wait=False) }
@@ -116,7 +146,7 @@ content: |
   ### Real estate taxes
 
   % if revenue_task.ready():
-    % if revenue_task.failed():
+    % if not hasattr(addr, 'revenue_page'):
   Unable to obtain Department of Revenue information.
     % else:
   ${ addr.revenue_page.show('100px', wait=False) }
@@ -128,17 +158,15 @@ content: |
   ### Department of Records documents
 
   % if philadox_task.ready():
-    % if philadox_task.failed():
+    % if not hasattr(addr, 'philadox_files'):
   Unable to obtain Department of Records information.
-    % elif hasattr(addr, 'philadox_files'):
+    % else:
       % for doc in [y for y in addr.philadox_files if y.filename == 'Philadox-listing.pdf']:
   ${ doc.show('100px', wait=False) }
       % endfor
       % for doc in [y for y in addr.philadox_files if y.filename != 'Philadox-listing.pdf']:
   ${ doc.show('100px', wait=False) }
       % endfor
-    % else:
-  Task did not fail, but files not there.
     % endif
   % else:
   Please wait.
@@ -148,7 +176,7 @@ content: |
   ### Complaint
 
   % if pleadings_task.ready():
-    % if pleadings_task.failed():
+    % if not hasattr(docket, 'pleadings_list'):
   Unable to obtain complaint.
     % else:
       % for pleading in docket.pleadings_list:
@@ -164,7 +192,7 @@ content: |
   ### Google Street View
 
   % if street_view_task.ready():
-    % if street_view_task.failed():
+    % if not hasattr(addr, 'google_street_view_image'):
   Unable to obtain Google Street View image.
     % else:
   [${ addr.google_street_view_image.show(width='100%') }](${ addr.google_street_view_pdf.url_for() })
@@ -205,7 +233,6 @@ code: |
   addr.opa_page = action_argument('opa_page')
   addr.avi_page = action_argument('avi_page')
   addr.has_homestead = action_argument('homestead')
-  mark_task_as_performed('opa')
   if all_finished(task_list):
     email_handled
   background_response()
@@ -218,7 +245,6 @@ scan for variables: False
 event: revenue_save
 code: |
   addr.revenue_page = action_argument('revenue_page')
-  mark_task_as_performed('revenue')
   if all_finished(task_list):
     email_handled
   background_response()
@@ -231,7 +257,6 @@ scan for variables: False
 event: pleadings_save
 code: |
   docket.pleadings_list = action_argument('pleadings_list')
-  mark_task_as_performed('pleadings')
   if all_finished(task_list):
     email_handled
   background_response()
@@ -244,7 +269,6 @@ scan for variables: False
 event: philadox_save
 code: |
   addr.philadox_files = action_argument('philadox_files')
-  mark_task_as_performed('philadox')
   if all_finished(task_list):
     email_handled
   background_response()
@@ -258,7 +282,6 @@ event: street_view_save
 code: |
   addr.google_street_view_image = action_argument('street_view_image')
   addr.google_street_view_pdf = action_argument('street_view_pdf')
-  mark_task_as_performed('street_view')
   if all_finished(task_list):
     email_handled
   background_response()

@@ -1,4 +1,4 @@
-from docassemble.base.util import DAFile, get_config, DAStaticFile, DARedis, Address, task_performed
+from docassemble.base.util import DAFile, get_config, DAStaticFile, DARedis, Address, task_performed, log
 import httplib2
 import json
 import urllib
@@ -6,7 +6,7 @@ import re
 import tempfile
 import time
 import os
-from subprocess import call, Popen, PIPE
+import subprocess
 import sys
 
 pleading_regexps = [r'COMPLAINT FILED NOTICE GIVEN',
@@ -80,7 +80,6 @@ class Property(object):
         street_view_image = tempfile.NamedTemporaryFile(prefix="datemp", suffix=".png")
         google_address = urllib.quote(self.one_line(with_city_state=True))
         the_url = 'https://maps.googleapis.com/maps/api/streetview?size=640x640&location=' + google_address + '&key=' + google_api_key
-        #raise Exception("Getting " + the_url + "\n")
         try:
             urllib.urlretrieve(the_url, street_view_image.name)
         except Exception as err:
@@ -125,7 +124,7 @@ class Property(object):
         tdir = tempfile.mkdtemp()
         info = urllib.quote(json.dumps([self.address['number'], self.address['direction'], self.address['street'], tdir, get_config('philadox username'), get_config('philadox password')]))
         step = ['casperjs', DAStaticFile(filename='eagleweb.js').path(), info]
-        result = call(step)
+        result = subprocess.call(step)
         r.delete('using_philadox')
         if result != 0:
             raise Exception("Failed to fetch Philadox information")
@@ -145,10 +144,10 @@ class Property(object):
         revenue_page.initialize(filename='Department-of-Revenue.pdf')
         address_escaped = urllib.quote(self.one_line())
         step = ['casperjs', DAStaticFile(filename='revenue.js').path(), address_escaped, revenue_page.path()]
-        result = call(step)
+        result = subprocess.call(step)
         if result != 0:
             time.sleep(5)
-            result = call(step)
+            result = subprocess.call(step)
         if result != 0:
             raise Exception("Failed to fetch Revenue information")
         revenue_page.retrieve()
@@ -167,16 +166,16 @@ class Property(object):
         address_escaped = urllib.quote(self.one_line())
         step = ['casperjs', DAStaticFile(filename='opa-png.js').path(), address_escaped, opa_image.name, avi_image.name, homestead.name]
         sys.stderr.write(" ".join(step) + "\n")
-        result = call(step)
+        result = subprocess.call(step)
         if result != 0:
             time.sleep(5)
-            result = call(step)
+            result = subprocess.call(step)
         if result != 0 and self.address.get('opa', None) is not None:
             step = ['casperjs', DAStaticFile(filename='opa-account-png.js').path(), self.address['opa'], opa_image.name, avi_image.name, homestead.name]
-            result = call(step)
+            result = subprocess.call(step)
             if result != 0:
                 time.sleep(5)
-                result = call(step)
+                result = subprocess.call(step)
         if result != 0:
             raise Exception("Failed to fetch OPA information")
         png_to_pdf(opa_image.name, opa_page.path())
@@ -308,12 +307,12 @@ def png_to_pdf(input_path, output_path):
              ['pdfjam', '--outfile', output_path, '--paper', 'letter', file_four.name]]
     for step in steps:
         sys.stderr.write("Doing " + " ".join(step) + "\n")
-        result = call(step)
+        result = subprocess.call(step)
         if result != 0:
             raise Exception("Image conversion failed")
         
 def all_finished(task_list):
     for task in task_list:
-        if not task_performed(task):
+        if not task.ready():
             return False
     return True
